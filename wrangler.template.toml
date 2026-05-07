@@ -1,0 +1,13 @@
+name = "evm-networks-gateway"
+main = "src/index.ts"
+compatibility_date = "2025-07-18"
+
+# Custom domain route (update zone_id for your Cloudflare zone)
+# routes = [
+#   { pattern = "evm-networks.your-domain.com/*", zone_id = "your-zone-id" }
+# ]
+
+[vars]
+CHAINLIST_URL = "https://chainlist.org/rpcs.json"
+NETWORKS_CACHE_TTL = "300"
+REQUEST_TIMEOUT_SECS = "10"

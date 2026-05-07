@@ -1,0 +1,126 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { Env, Network, HealthResponse, NetworksListResponse, NetworkResponse } from './types';
+import { fetchNetworks } from './upstream';
+import { getCached, setCache, resetCache } from './cache';
+
+// ---------------------------------------------------------------------------
+// Ensure networks are loaded (fetch if not cached)
+// ---------------------------------------------------------------------------
+async function ensureNetworks(env: Env): Promise<Network[]> {
+  const cached = getCached();
+  if (cached) return cached;
+
+  const networks = await fetchNetworks(env);
+  const ttl = parseInt(env.NETWORKS_CACHE_TTL || '300', 10);
+  setCache(networks, ttl);
+  return networks;
+}
+
+export { resetCache };
+
+// ---------------------------------------------------------------------------
+// Hono app
+// ---------------------------------------------------------------------------
+const app = new Hono<{ Bindings: Env }>();
+
+app.use('*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'OPTIONS'],
+  allowHeaders: ['Content-Type'],
+  maxAge: 86400,
+}));
+
+// Health check
+app.get('/health', async (c) => {
+  let count = 0;
+  try {
+    const networks = await ensureNetworks(c.env);
+    count = networks.length;
+  } catch {
+    // OK if not loaded yet
+  }
+  return c.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: '0.1.0',
+    networks_count: count,
+  } satisfies HealthResponse);
+});
+
+// List all networks
+// GET /api/v1/networks
+// GET /api/v1/networks?search=ethereum
+// GET /api/v1/networks?chainId=1
+app.get('/api/v1/networks', async (c) => {
+  try {
+    const networks = await ensureNetworks(c.env);
+    const query = c.req.query();
+
+    let filtered = networks;
+
+    // Filter by chainId
+    if (query.chainId) {
+      const chainId = parseInt(query.chainId, 10);
+      if (!isNaN(chainId)) {
+        filtered = filtered.filter(n => n.chainId === chainId);
+      }
+    }
+
+    // Filter by search (name, shortName, chain)
+    if (query.search) {
+      const q = query.search.toLowerCase();
+      filtered = filtered.filter(n =>
+        n.name.toLowerCase().includes(q) ||
+        n.chain.toLowerCase().includes(q) ||
+        n.shortName.toLowerCase().includes(q),
+      );
+    }
+
+    return c.json({
+      success: true,
+      data: filtered,
+    } satisfies NetworksListResponse);
+  } catch (err) {
+    return c.json({
+      success: false,
+      error: (err as Error).message,
+      data: [],
+    } satisfies NetworksListResponse, 500);
+  }
+});
+
+// Get single network by chainId
+// GET /api/v1/networks/1
+app.get('/api/v1/networks/:chainId', async (c) => {
+  try {
+    const chainId = parseInt(c.req.param('chainId'), 10);
+    if (isNaN(chainId)) {
+      return c.json({ success: false, error: 'Invalid chainId' } satisfies NetworkResponse, 400);
+    }
+
+    const networks = await ensureNetworks(c.env);
+    const network = networks.find(n => n.chainId === chainId);
+
+    if (!network) {
+      return c.json({
+        success: false,
+        error: `Network with chainId '${chainId}' not found`,
+      } satisfies NetworkResponse, 404);
+    }
+
+    return c.json({ success: true, data: network } satisfies NetworkResponse);
+  } catch (err) {
+    return c.json({
+      success: false,
+      error: (err as Error).message,
+    } satisfies NetworkResponse, 500);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Export for Cloudflare Worker
+// ---------------------------------------------------------------------------
+export default {
+  fetch: app.fetch,
+};
