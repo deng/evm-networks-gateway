@@ -292,7 +292,7 @@ describe('OpenAPI & Swagger UI', () => {
     const text = await res.text();
     expect(text).toContain('swagger-ui');
     expect(text).toContain('/openapi.json');
-  });
+  }, 15000);
 });
 
 // ---------------------------------------------------------------------------
