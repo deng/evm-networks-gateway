@@ -135,6 +135,20 @@ GET /api/v1/networks/:chainId
 }
 ```
 
+### OpenAPI / Swagger
+
+```
+GET /openapi.json
+```
+
+返回 OpenAPI 3.0.3 规范 JSON。
+
+```
+GET /docs
+```
+
+Swagger UI 交互式文档页面，可在浏览器中直接测试 API。
+
 ## 架构
 
 ```
