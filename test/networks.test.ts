@@ -270,6 +270,32 @@ describe('Error handling', () => {
 });
 
 // ---------------------------------------------------------------------------
+// OpenAPI / Swagger
+// ---------------------------------------------------------------------------
+describe('OpenAPI & Swagger UI', () => {
+  it('should serve OpenAPI spec at /openapi.json', async () => {
+    const app = await createApp();
+    const res = await app.fetch(mockRequest('GET', 'http://localhost/openapi.json'), mockEnv);
+    expect(res.status).toBe(200);
+    const body: any = await res.json();
+    expect(body.openapi).toBe('3.0.3');
+    expect(body.info.title).toBe('EVM Networks Gateway');
+    expect(body.paths['/api/v1/networks']).toBeDefined();
+    expect(body.paths['/api/v1/networks/{chainId}']).toBeDefined();
+    expect(body.paths['/health']).toBeDefined();
+  });
+
+  it('should serve Swagger UI at /docs', async () => {
+    const app = await createApp();
+    const res = await app.fetch(mockRequest('GET', 'http://localhost/docs'), mockEnv);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain('swagger-ui');
+    expect(text).toContain('/openapi.json');
+  }, 15000);
+});
+
+// ---------------------------------------------------------------------------
 // CORS
 // ---------------------------------------------------------------------------
 describe('CORS headers', () => {

@@ -1,8 +1,10 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { swaggerUI } from '@hono/swagger-ui';
 import { Env, Network, HealthResponse, NetworksListResponse, NetworkResponse } from './types';
 import { fetchNetworks } from './upstream';
 import { getCached, setCache, resetCache } from './cache';
+import { openApiSpec } from './openapi';
 
 // ---------------------------------------------------------------------------
 // Ensure networks are loaded (fetch if not cached)
@@ -30,6 +32,12 @@ app.use('*', cors({
   allowHeaders: ['Content-Type'],
   maxAge: 86400,
 }));
+
+// OpenAPI spec JSON
+app.get('/openapi.json', (c) => c.json(openApiSpec));
+
+// Swagger UI
+app.get('/docs', swaggerUI({ url: '/openapi.json' }));
 
 // Health check
 app.get('/health', async (c) => {
