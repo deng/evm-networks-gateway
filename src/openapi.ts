@@ -57,6 +57,20 @@ export const openApiSpec = {
             schema: { type: 'integer' },
             example: 1,
           },
+          {
+            name: 'page',
+            in: 'query',
+            description: 'Page number (default 1)',
+            schema: { type: 'integer', default: 1 },
+            example: 1,
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            description: 'Items per page (default 50, max 200, set 0 for all)',
+            schema: { type: 'integer', default: 50 },
+            example: 20,
+          },
         ],
         responses: {
           '200': {
@@ -70,6 +84,16 @@ export const openApiSpec = {
                     data: {
                       type: 'array',
                       items: { $ref: '#/components/schemas/Network' },
+                    },
+                    pagination: {
+                      type: 'object',
+                      nullable: true,
+                      properties: {
+                        page: { type: 'integer' },
+                        limit: { type: 'integer' },
+                        total: { type: 'integer' },
+                        totalPages: { type: 'integer' },
+                      },
                     },
                   },
                 },

@@ -119,13 +119,42 @@ describe('GET /api/v1/networks', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(chainlistMockResponse());
   });
 
-  it('should return all networks', async () => {
+  it('should return networks with pagination (default limit 50)', async () => {
     const app = await createApp();
     const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/networks'), mockEnv);
     expect(res.status).toBe(200);
     const body: any = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.length).toBe(3);
+    expect(body.pagination).toBeDefined();
+    expect(body.pagination.total).toBe(3);
+    expect(body.pagination.limit).toBe(50);
+    expect(body.pagination.page).toBe(1);
+  });
+
+  it('should paginate with custom limit', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/networks?limit=2'),
+      mockEnv,
+    );
+    expect(res.status).toBe(200);
+    const body: any = await res.json();
+    expect(body.data.length).toBe(2);
+    expect(body.pagination.total).toBe(3);
+    expect(body.pagination.totalPages).toBe(2);
+  });
+
+  it('should return all data with limit=0', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/networks?limit=0'),
+      mockEnv,
+    );
+    expect(res.status).toBe(200);
+    const body: any = await res.json();
+    expect(body.data.length).toBe(3);
+    expect(body.pagination).toBeUndefined();
   });
 
   it('should filter by chainId', async () => {

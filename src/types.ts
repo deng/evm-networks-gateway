@@ -77,6 +77,12 @@ export interface HealthResponse {
 export interface NetworksListResponse {
   success: boolean;
   data: Network[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
   error?: string;
 }
 
