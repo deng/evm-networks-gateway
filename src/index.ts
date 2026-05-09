@@ -60,6 +60,7 @@ app.get('/health', async (c) => {
 // GET /api/v1/networks
 // GET /api/v1/networks?search=ethereum
 // GET /api/v1/networks?chainId=1
+// GET /api/v1/networks?page=1&limit=20 (default limit 50, set limit=0 for all)
 app.get('/api/v1/networks', async (c) => {
   try {
     const networks = await ensureNetworks(c.env);
@@ -85,9 +86,24 @@ app.get('/api/v1/networks', async (c) => {
       );
     }
 
+    const total = filtered.length;
+    const limit = query.limit !== undefined ? parseInt(query.limit, 10) : 50;
+    const unlimited = limit === 0;
+
+    if (unlimited) {
+      return c.json({ success: true, data: filtered } satisfies NetworksListResponse);
+    }
+
+    const page = Math.max(1, parseInt(query.page || '1', 10) || 1);
+    const safeLimit = Math.max(1, Math.min(limit, 200));
+    const totalPages = Math.ceil(total / safeLimit);
+    const start = (page - 1) * safeLimit;
+    const paged = filtered.slice(start, start + safeLimit);
+
     return c.json({
       success: true,
-      data: filtered,
+      data: paged,
+      pagination: { page, limit: safeLimit, total, totalPages },
     } satisfies NetworksListResponse);
   } catch (err) {
     return c.json({
